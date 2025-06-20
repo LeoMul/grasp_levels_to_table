@@ -2,6 +2,82 @@ import numpy as np
 
 ANGULAR_SYMBOLS = ['s','p','d','f','g','h','i','k','l','m','o','p']
 
+def display_states(states,header):
+    
+    #displays the eigenvec
+    
+    print(header)
+    
+    for state in states:
+        state.display_state()
+        
+    return 0 
+
+def readConfigFile(path_to_config_dot_dat):
+    '''
+    This routine will read the CONFIG.DAT file,
+    which is perhaps a more reliable way of obtaining the data than in das,
+    which may or may not be formatted in a particular way.
+    
+    The code is (probably) similar to that of autoDarc 
+    https://github.com/LeoMul/autoDarc/blob/main/write_dstg2inp.py
+    
+    '''
+    
+    f = open('CONFIG.DAT','r')
+
+    firstline = f.readline().split()
+
+
+    second_line = f.readline().split()
+    
+    num_orbs = int(len(second_line) / 2 )
+
+    third_line = f.readline().split()
+    
+    num_csfs = int(third_line[0])
+    
+    princN = []
+    orbital_L = [] #np.zeros(num_orbs,dtype=int)
+    orbital_strings = [] 
+    
+    for ii in range(0,len(second_line),2):
+        princN.append(int(second_line[ii]))
+        orbital_L.append(int(second_line[ii+1]))
+        string = second_line[ii]+translate_angular(int(second_line[ii+1]))
+        #print(string)
+        orbital_strings.append(string)
+
+        #print(orbL[ii])
+        #string = str(princN[ii])+angular_symbols[orbL[ii]]
+        #orbs.append(string)
+
+#   orbital_strings = []
+#   orbital_L = []
+#
+#   for kk in range(0,len(orbital_data),2):
+#       orbital_strings.append(orbital_data[kk]+translate_angular(int(orbital_data[kk+1])))
+#       orbital_L.append(int(orbital_data[kk+1]))
+
+    #num_csfs = int(f.readline().split()[0])
+
+    f.close()
+
+
+    #easiest way for me to do this:
+    das_file_numpy = np.loadtxt(path_to_config_dot_dat,skiprows=5,dtype=int)[:,0:-1]
+    #print(das_file_numpy)
+    #temperory
+    lambda_array = np.ones(num_orbs)
+    
+    #print(orbital_strings)
+    
+    return das_file_numpy,orbital_strings,num_csfs,lambda_array,orbital_L
+
+
+
+
+
 def read_das(path_to_das):
 
     das_file_opened = open(path_to_das,'r')
@@ -12,10 +88,11 @@ def read_das(path_to_das):
     total_num_orbs = int( len(orbital_data) / 2 ) 
     
     orbital_strings = []
+    orbital_L = []
 
     for kk in range(0,len(orbital_data),2):
         orbital_strings.append(orbital_data[kk]+translate_angular(int(orbital_data[kk+1])))
-
+        orbital_L.append(int(orbital_data[kk+1]))
 
     #print(orbital_strings)
 
@@ -30,6 +107,7 @@ def read_das(path_to_das):
 
     das_file_opened.close() 
 
+    #assumes that the namelist is one line.. porbably needs to he changed.
     das_file_numpy = np.loadtxt(path_to_das,skiprows=3,max_rows=num_csfs,dtype=int)
     #print(np.shape(das_file_numpy))
     
@@ -55,22 +133,49 @@ def read_das(path_to_das):
                 lambda_collection.extend(das_file_read[ii].split())
             else:
                 break
-            
-    for ii in range(0, len(lambda_array)):
-        lambda_array[ii] = float(lambda_collection[ii])
-
+    try:
+        if len(lambda_array) >0:     
+            for ii in range(0, len(lambda_array)):
+                lambda_array[ii] = float(lambda_collection[ii])
+    except:
+        lambda_array = np.zeros(100)
     #print('Lambda array found:')
     #print(lambda_array)
 
-    return das_file_numpy,orbital_strings,num_csfs,lambda_array
+    return das_file_numpy,orbital_strings,num_csfs,lambda_array,orbital_L
 
-def make_csf_strings(das_file_numpy,orbital_strings,num_csfs,num_requested_orbitals,lambda_array):
+def findCore(das_file_numpy,orbital_L):
+    ncsfs,num_orbitals = np.shape(das_file_numpy)
+    print(num_orbitals,ncsfs)
+    
+    print(das_file_numpy)
+    
+    orbital_L = np.array(orbital_L)  
+    print(orbital_L)  
+    full_L = (2*(2*orbital_L+1))
+    print(full_L)
+    core = 0
+    exit_outer = False
+    for j in range(0,num_orbitals):
+        for i in range(0,ncsfs):
+            if das_file_numpy[i,j] != full_L[j]:
+                print(orbital_L[j],das_file_numpy[i,j])
+                exit_outer = True
+        if(exit_outer):
+            break
+        core+= 1 
+    
+    return core
+
+def make_csf_strings(das_file_numpy,orbital_strings,num_csfs,num_requested_orbitals,lambda_array,orbital_L,core):
     csf_strings = []
     pseudo_array = []
     
+    #print(findCore(das_file_numpy,orbital_L))
+    
 
     for jj in range(0, num_csfs):
-        current_csf_ints = das_file_numpy[jj]
+        current_csf_ints = das_file_numpy[jj][core:]
         concerned_occupations_locations = np.argwhere(current_csf_ints > 0 )
 
         #print(concerned_occupations_locations)
@@ -79,7 +184,7 @@ def make_csf_strings(das_file_numpy,orbital_strings,num_csfs,num_requested_orbit
         concerned_occupations_orbitals = []
 
         for kk in range(0,len(concerned_occupations_locations)):
-            concerned_occupations_orbitals.append(orbital_strings[concerned_occupations_locations[kk][0]])
+            concerned_occupations_orbitals.append(orbital_strings[concerned_occupations_locations[kk][0]+core])
 
         pseudo = 0
 
@@ -94,7 +199,7 @@ def make_csf_strings(das_file_numpy,orbital_strings,num_csfs,num_requested_orbit
         cf_format = '{:>3}{:3} '
         for kk in range(min,num_orbitals):
             current_csf_string += cf_format.format(concerned_occupations_orbitals[kk], str(concerned_occupations_numbers[kk][0]))# + " "
-        #print(current_csf_string)
+        #  print(current_csf_string)
 
         csf_strings.append(current_csf_string)
     return csf_strings,pseudo_array
@@ -229,7 +334,7 @@ def read_oic_and_output(oic,csf_strings,num_levels,unit):
 
     return 0
 
-def read_oic_into_list_of_eigenstates(oic,csf_strings,num_levels,factor,unit):
+def read_oic_into_list_of_eigenstates(oic,csf_strings,num_levels,factor,unit,core):
 
     skip = len(csf_strings)
 
@@ -304,13 +409,14 @@ def read_oic_into_list_of_eigenstates(oic,csf_strings,num_levels,factor,unit):
     for state in states:
         lengths.append(len(state.label_string))
 
-    max_length = max(lengths)
-    #print(max_length)
-    for state in states:
-        length = len(state.label_string)
-        if len(state.label_string) < max_length:
-            #print('hello')
-            state.label_string = state.label_string + (max_length-length)*' '
+    if (core == 0):
+        max_length = max(lengths)
+        #print(max_length)
+        for state in states:
+            length = len(state.label_string)
+            if len(state.label_string) < max_length:
+                #print('hello')
+                state.label_string = state.label_string + (max_length-length)*' '
 
     return states
 
@@ -337,7 +443,8 @@ class energy_eigenstate_as_ic:
                  lv_number,
                  unit,
                  factor,
-                 j_string
+                 j_string,
+                 numorbsshown=[]
                  ):
 
         self.energy_ryd         = energy_ryd
@@ -634,6 +741,7 @@ def read_olg_for_groups():
 
 
 def read_olg_for_ci_matrix(groups,group_sizes):
+    total = 0
     f = open('olg','r')
     def read_eigenvector(blocksize,line):
         #blocksize = 41
@@ -680,6 +788,13 @@ def read_olg_for_ci_matrix(groups,group_sizes):
     ii=0
     while checker: 
         ii+=1 
+        #TODO: this relies on there being a space.. 
+        #this was gauranteed by making the global repaclement
+        # 10050 FORMAT(I5,I4,4I3,F14.5,F14.6,I3,I4,10F8.4)
+
+        # 10050 FORMAT(I5,1X,I4,4I3,F14.5,F14.6,I3,I4,10F8.4)
+                #but - probably better to count character numbers and read that way. Or!
+                #reading with fortran format.
         line = f.readline().split()
         if len(line) > 9: 
             if line[9] == 'CI-MATRIX':
@@ -700,7 +815,9 @@ def read_olg_for_ci_matrix(groups,group_sizes):
         blocksize = group_sizes[jj]
         #print('new block',blocksize)
         for kk in range(0,blocksize):
-        
+            total+=1
+
+            #print(jj,blocksize,kk,total)
             checker = True 
             #print(ii)
             block_lv_map[requested_level] = int(jj)
