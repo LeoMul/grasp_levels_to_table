@@ -2,14 +2,15 @@ import numpy as np
 
 ANGULAR_SYMBOLS = ['s','p','d','f','g','h','i','k','l','m','o','p']
 
-def display_states(states,header):
+def display_states(states,header,ground):
     
     #displays the eigenvec
     
     print(header)
     
     for state in states:
-        state.display_state()
+        shift = states[ground].energy_ryd
+        state.display_state(shift)
         
     return 0 
 
@@ -334,8 +335,10 @@ def read_oic_and_output(oic,csf_strings,num_levels,unit):
 
     return 0
 
-def read_oic_into_list_of_eigenstates(oic,csf_strings,num_levels,factor,unit,core):
+def read_oic_into_list_of_eigenstates(oic,csf_strings,num_levels,factor,unit,core,override):
 
+    #skip override
+    
     skip = len(csf_strings)
 
     x = linecache.getline(oic, 4).split()
@@ -354,7 +357,10 @@ def read_oic_into_list_of_eigenstates(oic,csf_strings,num_levels,factor,unit,cor
         x = linecache.getline(oic, skip + 6).split()
         #print(x)
 
-    level_data = np.loadtxt(oic,skiprows=skip + 7,max_rows=int(x[1])) 
+    if override != 0:
+        print('override=',override,'skiprows=',skip + 7 + override)
+    #print(int(x[1]))
+    level_data = np.loadtxt(oic,skiprows=skip + 7 + override,max_rows=int(x[1])) 
     #print(level_data)
     #print(np.shape(terms_data))
     if num_levels > np.shape(level_data)[0]:
@@ -483,11 +489,11 @@ class energy_eigenstate_as_ic:
 
 
 
-    def display_state(self):
+    def display_state(self,shift):
 
             self.output_string = self.output_string.format(
             self.level_index,
-            self.energy_ryd,
+            self.energy_ryd-shift,
             self.label_string,
             self.j_string,
             self.lv_number

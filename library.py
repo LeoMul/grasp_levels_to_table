@@ -4,7 +4,7 @@ import sys
 LINE_READING_LIMIT = 10**7
 RYDBERG_CM = 109737.316 
 #preferred orbital order. you might need to change this for your preferred application.
-orbitals_order = ['1S', '2S', '2P', '3S', '3P', '3D', '4S', '4P', '4D','4F', '5S', '5P','5D', '6S', '6P', '7S', '5F', '6F', '6D', '7P', '8S','5G','6G','6H','8P','7D']
+orbitals_order = ['1S', '2S', '2P', '3S', '3P', '3D', '4S', '4P', '4D', '5S', '5P','4F','5D', '6S', '6P', '7S', '5F', '6F', '6D', '7P', '8S','5G','6G','6H','8P','7D']
 
 orbital_angular_momentum_dictionary = np.array(['S','P','D','F','G','H','I'])
 
@@ -389,55 +389,68 @@ def sort_orbitals(orb_labels,orbitals_order,csf_array):
 
     return sorted_orbital_array,csf_sorted_by_orbital
 
-def make_csf_strings(num_orbitals_to_be_shown,csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs):
+def getMaxOcc(orb):
+    
+    angL = orb[-1]
+    ind = np.argwhere(orbital_angular_momentum_dictionary == angL)
+    
+    return int ( ind*4 + 2 )
+
+def find_core(csf_array_resorted_orbitals,sorted_orbs):
+    
+    for ii in range(0,len(sorted_orbs)):
+        max_occ = getMaxOcc(sorted_orbs[ii])
+        if np.any(csf_array_resorted_orbitals[:,ii] != max_occ):
+            core = ii-1  
+            break
+    
+    if core < 0 :
+        core  = 0 
+    print('found core= ',core)
+    return core 
+
+def make_csf_strings(csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs,core):
     #makes strings out of the input csfs.
-    num_orbitals_to_be_shown = min(num_orbitals_to_be_shown,len(sorted_orbital_strings))
 
     csf_strings_in_components = []
     
     csf_strings = []
     
     lengths = []
-
-    #print(sorted_orbital_strings)
+    lengths_of_full_strings = []
 
     for ii in range(0,num_csfs):
-        kept_orbital_strings = []
+        
         current_csf = csf_array_resorted_orbitals[ii]
-        occupations_of_interest_indices = np.concatenate(np.argwhere(current_csf>0))
-        occupations_of_interest = current_csf[occupations_of_interest_indices]
-        #print(occupations_of_interest_indices)
-
-        num_occupations_of_interest = len(occupations_of_interest_indices)
-
-        for kk in range(0,num_occupations_of_interest):
-            kept_orbital_strings.append(sorted_orbital_strings[occupations_of_interest_indices[kk]])
-
-        #print(kept_orbital_strings)
 
         csf_string_broken_down = []
-        #the max business is in case all orbitals are requested -- this could go negative, and cause me a headache.
-        for kk in range(max(num_occupations_of_interest - num_orbitals_to_be_shown,0),num_occupations_of_interest):
-            addition = kept_orbital_strings[kk] + str(int(occupations_of_interest[kk]))
-            lengths.append(len(addition))
-            csf_string_broken_down.append(addition)
-
-        #csf_string = csf_string.lower()
         
-        #print(csf_string)
-        csf_strings_in_components.append(csf_string_broken_down)
+        for kk in range(core,len(sorted_orbital_strings)):  
+            
+            if current_csf[kk] > 0:
+                orb_contr = sorted_orbital_strings[kk].lower() + str(int(current_csf[kk]))
+                csf_string_broken_down.append(orb_contr)
+                lengths.append(len(orb_contr))
+                csf_strings_in_components.append(csf_string_broken_down)
+
     
     max_length = max(lengths)
-
+    lengths_of_strings = np.zeros(np.shape(csf_array_resorted_orbitals)[0])
+    max_length_of_full_string = 0
     for jj in range(0,len(csf_strings_in_components)):
         current_string = ''
+        
         for kk in csf_strings_in_components[jj]:
             current_string += kk + (max_length-len(kk))*' ' + ' '
+            
         csf_strings.append(current_string)
-        #length_of_this = len(csf_strings[jj])
-        #csf_strings[jj] = csf_strings[jj] + (max_length-length_of_this)*' '
+        curlen = len(current_string)
+        if curlen > max_length_of_full_string:
+            max_length_of_full_string = curlen
 
-
+    for (jj,csf) in enumerate(csf_strings):
+        csf_strings[jj] = csf + (max_length_of_full_string-len(csf)) * ' '
+    
     return csf_strings
 
 def make_csfs_strings_for_adas(csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs):
@@ -630,13 +643,42 @@ def find_place_for_inner_term(csf_string):
     return ii    
 
 
-def output_table(eiegenstates_array,user_chosen_num_levels=0):
+def output_table(eiegenstates_array,user_chosen_num_levels=0,unit=0):
+    
+    #todo: case statement for this 
+    factor=1
+    unitstring = ' Ryd '
+    energy_format = '{:14.6e}'
+    ground_format = '{:14.6e}'
+    if int(unit) == 0:
+        unit = 0
+        unitstring = ' Ryd '
+        factor=1
+    elif int(unit) == 1:
+        unit = 1
+        unitstring = '  eV '
+        factor=13.605693122990
+    elif int(unit) == 2:
+        unit = 2
+        unitstring = 'cm^-1'
+        factor=109737.31568157
+        energy_format = '{:14.3f}'
+    else:
+        unit = 0
+        unitstring = ' Ryd '
+        factor = 1.0
+        print("Invalid unit specification. Defaulting to Ryd.")
+        
     num = len(eiegenstates_array)
 
     if (user_chosen_num_levels != 0) and (user_chosen_num_levels < num):
         num = user_chosen_num_levels 
 
-    header = 'Index,     Energy (Ry),   Parity,        J,      LS Level Composition'
+    header = 'Index,  Energy ({:5}),   Parity,        J,      LS Level Composition'.format(unitstring)
+    #format_string = '{:5},  {:14E},     {:8},  {:4},    {}'
+    format_string = '{:5},  '+energy_format+',     {:8},  {:4},    {}'
+    format_string_ground = '{:5},  '+ground_format+',     {:8},  {:4},    {}'
+
     print(header)
     for jj in range(0,num):
 
@@ -647,8 +689,11 @@ def output_table(eiegenstates_array,user_chosen_num_levels=0):
         parity = current_state.parity
         angular_momentum = current_state.angular_momentum
         csf_string = current_state.csf_string
-            
-        output_string = '{:5},  {:14E},     {:8},  {:4},    {}'.format(level,energy,parity,angular_momentum,csf_string)
+        if jj != 0:
+            output_string = format_string.format(level,energy*factor,parity,angular_momentum,csf_string)
+        else:
+            output_string = format_string_ground.format(level,energy*factor,parity,angular_momentum,csf_string)
+
         print(output_string)
 
 
@@ -883,3 +928,4 @@ def print_out_a_values(total_data_class_array:list[transition]):
         trans.display_transition()
 
     return 0
+

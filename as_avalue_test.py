@@ -1,11 +1,11 @@
 from as_lib import * 
 
-path = '/Users/leomulholland/CeIII_AS/opt3_icr/shift/olg'
+path = 'olg'
 
 das_file_numpy,orbital_strings,num_csfs,lambda_array = read_das('/Users/leomulholland/CeIII_AS/opt3_icr/shift/das_test')
 csf_strings,pseudo_array = make_csf_strings(das_file_numpy,orbital_strings,num_csfs,5,lambda_array)
 
-states = read_oic_into_list_of_eigenstates('/Users/leomulholland/CeIII_AS/opt3_icr/shift/oic',csf_strings,num_levels=2**63)
+states = read_oic_into_list_of_eigenstates('oic',csf_strings,2**63,1,'Ryd')
 
 
 transitions,avalues = get_transitions(path,states)

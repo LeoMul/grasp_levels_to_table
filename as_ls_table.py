@@ -10,8 +10,11 @@ parser.add_argument('-l', '--oic',  help='Specify path of oic')
 parser.add_argument('-v', '--eigenvector',  help='Print out eigenvector expansion',action='store_true')
 parser.add_argument('-n', '--num',  help='Requested number of states (all states by default)',type=int)
 parser.add_argument('-o', '--num_orbitals',  help='number of orbitals to show in NRCSF (2 default)',type=int)
-parser.add_argument('-u', '--unit',  help='Unit: Ryd=0,eV=1,cm=2. Default: 0',type=int)
-parser.add_argument('-c', '--core',  help='Core override, orbital index.',type=int)
+parser.add_argument('-u', '--unit',          help='Unit: Ryd=0,eV=1,cm=2. Default: 0',type=int)
+parser.add_argument('-c', '--core',          help='Core   override, orbital index.',type=int)
+parser.add_argument('-g', '--ground',        help='Ground override, level   index.',type=int)
+
+parser.add_argument('-s', '--override',  help='Reading override, for debugging',type=int)
 
 args = parser.parse_args()
 
@@ -83,9 +86,20 @@ else:
         if args.terms:
             read_terms_and_output(args.terms,csf_strings,user_num_levels,pseudo_array)
         
+        ground = 0 
+          
+        if args.ground:
+            ground = int(args.ground)    
+            print('using ground = state ',ground,' (zero indexed) ')
+    
         if args.oic:
             #to do: put these into a subroutine
-            states = read_oic_into_list_of_eigenstates(args.oic,csf_strings,user_num_levels,factor,unit,core)
+            override = 0
+            if args.override:
+                override = int(args.override)
+            
+            
+            states = read_oic_into_list_of_eigenstates(args.oic,csf_strings,user_num_levels,factor,unit,core,override)
             
             header = 'Index,  Energy({:5}),            CSF(TERM),     J,     LV'.format(unitstring)
             
@@ -131,11 +145,11 @@ else:
 
                             if((counter > 20)or(summ > 99)):
                                 break
-                        print('{:5}, {:2}, {:12}, {:5}, '.format(level_index+1,state.angular_momentum_j,state.energy_ryd,state.lv_number),string)
+                        print('{:5}, {:2}, {:12.8f}, {:5}, '.format(level_index+1,state.angular_momentum_j,state.energy_ryd-states[ground].energy_ryd,state.lv_number),string)
                         #print("Total % comp: ",summ)
                         #print(17*' '+45*'*')
             else:
-                display_states(states,header)
+                display_states(states,header,ground)
 
 
 
