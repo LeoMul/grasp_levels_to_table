@@ -406,7 +406,7 @@ def find_core(csf_array_resorted_orbitals,sorted_orbs):
     
     if core < 0 :
         core  = 0 
-    print('found core= ',core)
+    #print('found core= ',core)
     return core 
 
 def make_csf_strings(csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs,core):
