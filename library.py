@@ -431,7 +431,7 @@ def make_csf_strings(csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs
                 orb_contr = sorted_orbital_strings[kk].lower() + str(int(current_csf[kk]))
                 csf_string_broken_down.append(orb_contr)
                 lengths.append(len(orb_contr))
-                csf_strings_in_components.append(csf_string_broken_down)
+        csf_strings_in_components.append(csf_string_broken_down)
 
     
     max_length = max(lengths)
