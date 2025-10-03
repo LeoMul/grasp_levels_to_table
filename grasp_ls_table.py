@@ -10,6 +10,7 @@ parser.add_argument('-i', '--inner_terms', help='show inner terms',action='store
 parser.add_argument('-nc', '--ncorinc',    help='print csfs needed for energy less than ncorinc',type=float)
 parser.add_argument('-c', '--core',        help='Core   override, orbital index.',type=float)
 parser.add_argument('-u', '--unit',        help='Unit: Ryd=0,eV=1,cm=2. Default: 0',type=int)
+parser.add_argument('-a', '--adas',        help='Print an adasexj.in',action='store_true')
 
 args = parser.parse_args()
 
@@ -29,6 +30,9 @@ def main(
         print('your GRASP printing is in mode 0 - pressing on but it is not likely your grasp.out contains the jj2ls data i want.')
         print('-------------')
 
+    nelec = int(np.average(np.sum(csf_array,axis=1)))
+    #print(nelec)
+    
     core = 0 
     user_override_core = False
     try:
@@ -42,20 +46,29 @@ def main(
     else:
         core  = find_core(csf_sorted_by_orbital,sorted_orbital_array)
 
-    csf_strings_prepared = make_csf_strings(csf_sorted_by_orbital,sorted_orbital_array,num_nrcsf,core)
+    csf_strings_prepared,adas_strings = make_csf_strings(csf_sorted_by_orbital,sorted_orbital_array,num_nrcsf,core)
+    #print(csf_strings_prepared)
+    
     map,num_rcsf = find_relativistic_csfs(grasp_out_path,num_nrcsf)
-
+    #print(csf_strings_prepared)
     if args.inner_terms:
         inner_terms = find_inner_occupation_terms(grasp_out_path,mode,num_rcsf)
     else:
         inner_terms = []
     #print(inner_terms)
-    states = find_levels(grasp_out_path,inner_terms,csf_strings_prepared,map)
-    
+    states,charge = find_levels(grasp_out_path,inner_terms,csf_strings_prepared,map,adas_strings)
+
     if display_inner_terms:
         states = add_inner_occupation_strings_to_eigenclass(grasp_out_path,mode,states,display_inner_terms,csf_strings_prepared,map)
 
     output_table(states,user_num_levels,unit)
+    
+    adas = False 
+    if (args.adas):
+        adas = True
+    if adas:
+        write_adasexjin(states,user_num_levels,charge,nelec)        
+    
     if args.ncorinc: 
         cut = float(args.ncorinc)
         

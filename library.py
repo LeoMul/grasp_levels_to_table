@@ -8,6 +8,18 @@ orbitals_order = ['1S', '2S', '2P', '3S', '3P', '3D', '4S', '4P', '4D', '5S', '5
 
 orbital_angular_momentum_dictionary = np.array(['S','P','D','F','G','H','I'])
 
+
+
+
+elements=['H ','He','Li','Be','B ','C ','N ','O ','F ','Ne','Na','Mg'
+        ,'Al','Si','P ','S ','Cl','Ar','K ','Ca','Sc','Ti','V ','Cr','Mn'
+        ,'Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br','Kr','Rb','Sr'
+        ,'Y ','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb'
+        ,'Te','I ','Xe','Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd'
+        ,'Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir'
+        ,'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th'
+        ,'Pa','U ']
+
 class energy_eigenstate:
 
     def make_total_string(self,display_inner_terms,csf_strings_prepared,rcsfs_map_to_nrcsfs):
@@ -70,9 +82,46 @@ class energy_eigenstate:
         self.leading_term_string = leading_term_string
         self.leading_term_only_adas = '({:2})'.format(self.terms_strings[0])
 
+    def make_adas_line(self,adas_strings,rcsfs_map_to_nrcsfs):
+        '    1 4S2 4P4           (3)1( 2.0)               0.0000'
+        adas_format = '{:>5}{:<19}({:1}){:1}({:4.1f}){:>21.4f}'
+        current_csf_component_index = self.mixing_indices[0]
+        current_nrcsf_index = int(rcsfs_map_to_nrcsfs[current_csf_component_index])
+        #print(adas_strings)
+        as_string = adas_strings[current_nrcsf_index]
+        #print(current_nrcsf_index)
+        #print(self.level)
+        if self.level != 1:
+            en = self.eigenenergy * RYDBERG_CM
+        else:
+            en = 0.0 
+            
+        self.adas_line = adas_format.format(
+            self.level,
+            as_string,
+            '1',
+            '1',
+            1.0,
+            en
+        )
+        
+        #print(adas_strings[current_nrcsf_index])
+        
 
-
-    def __init__(self,level,terms_strings,angular_momentum,parity,mixing_indices,mixing_amounts,eigenenergy,csf_strings_prepared,rcsfs_map_to_nrcsfs,display_inner_terms,inner_terms_strings=[]):
+    def __init__(self,
+                 level,
+                 terms_strings,
+                 angular_momentum,
+                 parity,
+                 mixing_indices,
+                 mixing_amounts,
+                 eigenenergy,
+                 csf_strings_prepared,
+                 rcsfs_map_to_nrcsfs,
+                 display_inner_terms,
+                 inner_terms_strings=[],
+                 adas_strings=[]
+                 ):
         self.mixing_indices = mixing_indices
         self.mixing_amounts = mixing_amounts
         self.terms_strings = terms_strings
@@ -102,6 +151,7 @@ class energy_eigenstate:
         #print(level)
         self.make_total_string(display_inner_terms,csf_strings_prepared,rcsfs_map_to_nrcsfs)
         self.make_leading_term_string(csf_strings_prepared,rcsfs_map_to_nrcsfs)
+        self.make_adas_line(adas_strings,rcsfs_map_to_nrcsfs)
 
     def set_shifted_energy(self,shifted_energy_ryd):
         self.shifted_energy_ryd = shifted_energy_ryd
@@ -411,7 +461,9 @@ def find_core(csf_array_resorted_orbitals,sorted_orbs):
 
 def make_csf_strings(csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs,core):
     #makes strings out of the input csfs.
-
+    
+    adas_strings = []
+    
     csf_strings_in_components = []
     
     csf_strings = []
@@ -419,18 +471,26 @@ def make_csf_strings(csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs
     lengths = []
     lengths_of_full_strings = []
 
+    adas_format = '{:>2}{:1}{:1}'
+    
+    occupation_adas_character = [None,'1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H']
+    
+    
     for ii in range(0,num_csfs):
         
         current_csf = csf_array_resorted_orbitals[ii]
 
         csf_string_broken_down = []
-        
+        current_adas = ''
         for kk in range(core,len(sorted_orbital_strings)):  
             
             if current_csf[kk] > 0:
                 orb_contr = sorted_orbital_strings[kk].lower() + str(int(current_csf[kk]))
                 csf_string_broken_down.append(orb_contr)
                 lengths.append(len(orb_contr))
+                current_adas +=  adas_format.format(sorted_orbital_strings[kk][0:-1],sorted_orbital_strings[kk][-1],occupation_adas_character[int(current_csf[kk])])
+        #print(current_adas)
+        adas_strings.append(current_adas)
         csf_strings_in_components.append(csf_string_broken_down)
 
     
@@ -451,7 +511,7 @@ def make_csf_strings(csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs
     for (jj,csf) in enumerate(csf_strings):
         csf_strings[jj] = csf + (max_length_of_full_string-len(csf)) * ' '
     
-    return csf_strings
+    return csf_strings,adas_strings
 
 def make_csfs_strings_for_adas(csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs):
     csf_strings_adas = []
@@ -566,13 +626,17 @@ def find_relativistic_csfs(grasp_out_path,num_csf):
     graspout.close()
     return rcsfs_map_to_nrcsfs,num_rcsf_total
 
-def find_levels(grasp_out_path,inner,csf_strings_prepared,rcsfs_map_to_nrcsfs):
+def find_levels(grasp_out_path,inner,csf_strings_prepared,rcsfs_map_to_nrcsfs,adas_strings):
     graspout = open(grasp_out_path,'r')
     found = False
     while found == False:
         lineunplit = graspout.readline()
         line = lineunplit.split()
         if len(line)>0:
+            
+            if line[0] == 'Z':
+                charge = int(float(line[-1]))
+            
             if line[-1] == 'others)':
                 #print(line)
                 found = True
@@ -606,7 +670,7 @@ def find_levels(grasp_out_path,inner,csf_strings_prepared,rcsfs_map_to_nrcsfs):
                 if in_a_state == True:
                     #we are now in a new eigenstate, so save the previous one:
                     #print(current_length)
-                    state = energy_eigenstate(level,term_strings,angularmomentum,parity,csf_index,mixing,eigenergy,csf_strings_prepared,rcsfs_map_to_nrcsfs,inner)
+                    state = energy_eigenstate(level,term_strings,angularmomentum,parity,csf_index,mixing,eigenergy,csf_strings_prepared,rcsfs_map_to_nrcsfs,inner,adas_strings=adas_strings)
                     states.append(state)
                 
                 in_a_state = True
@@ -625,10 +689,20 @@ def find_levels(grasp_out_path,inner,csf_strings_prepared,rcsfs_map_to_nrcsfs):
                 csf_index.append(int(line[4])-1)
                 mixing.append(float(line[5]))
                 #print(line)
-    state = energy_eigenstate(level,term_strings,angularmomentum,parity,csf_index,mixing,eigenergy,csf_strings_prepared,rcsfs_map_to_nrcsfs,inner)
+    state = energy_eigenstate(level,
+                              term_strings,
+                              angularmomentum,
+                              parity,
+                              csf_index,
+                              mixing,
+                              eigenergy,
+                              csf_strings_prepared,
+                              rcsfs_map_to_nrcsfs,
+                              inner,
+                              adas_strings=adas_strings)
     states.append(state)
 
-    return states
+    return states,charge
 
 
 def find_place_for_inner_term(csf_string):
@@ -929,3 +1003,40 @@ def print_out_a_values(total_data_class_array:list[transition]):
 
     return 0
 
+
+
+
+def write_adasexjin(states,user_num_levels,charge,nelec):
+    from pathlib import Path
+    ROOT_DIR = Path(__file__).parent
+    TEXT_FILE = ROOT_DIR / 'ion_energy.dat'
+    ip = np.loadtxt(TEXT_FILE)
+    TEXT_FILE_terms = ROOT_DIR / 'ion_terms.dat'
+    tt = np.loadtxt(TEXT_FILE_terms,dtype='>U2')
+    
+    ion_stage_index = charge - nelec 
+    atomic_number_index = charge - 1 
+    ion_pot = ip[ion_stage_index,atomic_number_index]
+    ion_term = tt[ion_stage_index,atomic_number_index]
+    g = open('adasexj.in.graspout','w')
+    g.write("&ADASEX NLEVS= {} NUMTMP=19 IRDTMP=1 ITCC=1 IBORN=-2 IRMPS=-1  IEL='{:2}' FIPOT={:11.1f} IONTRM='{:2}'/ \n".format(
+        user_num_levels,elements[charge-1],ion_pot,ion_term))
+   
+    g.write("1.00+03 1.50+03 1.80+03 2.00+03 2.50+03 5.00+03 7.50+03 1.00+04 1.50+04 1.80+04 2.00+04 3.00+04 4.00+04 5.00+04 6.00+04 7.00+04 8.00+04 9.00+04 1.00+05 \n")
+
+
+    
+    
+    
+    for ii in range(0,user_num_levels):
+        state = states[ii]
+        g.write(state.adas_line+'\n')
+    
+    
+    g.write('NAME:\n')
+    g.write('DATE:\n')
+    g.write('                      ENTER DETAILS OF CALCULATION\n')
+    g.write('.\n')
+    g.close()
+
+    return 0 
