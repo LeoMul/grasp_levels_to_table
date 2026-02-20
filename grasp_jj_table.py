@@ -28,7 +28,7 @@ else:
     csf_array,orb_labels,num_nrcsf,num_orbs,mode = library.create_csf_array_from_output(grasp_out_path)
     sorted_orbital_array,csf_sorted_by_orbital = library.sort_orbitals(orb_labels,library.orbitals_order,csf_array)
 
-    csf_strings_prepared = library.make_csf_strings(num_orbitals_shown,csf_sorted_by_orbital,sorted_orbital_array,num_nrcsf)
+    csf_strings_prepared,ads = library.make_csf_strings(csf_sorted_by_orbital,sorted_orbital_array,num_nrcsf,num_orbitals_shown)
 
     #print(csf_strings_prepared)
 
@@ -61,7 +61,7 @@ else:
     jj_terms = decode_jj_terms(jj_terms_raw)
     #print(jj_terms)
     eigenstate_array = produce_eigenstate_array(levels,eigenvectors)
-
+    #print(csf_strings_prepared[0])
     eigenstate_array = make_many_eigenstate_strings(eigenstate_array,num_components_to_be_shown,jj_terms,map,csf_strings_prepared)
     output_table(eigenstate_array,num_levels_to_be_shown)
 

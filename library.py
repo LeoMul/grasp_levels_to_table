@@ -83,8 +83,8 @@ class energy_eigenstate:
         self.leading_term_only_adas = '({:2})'.format(self.terms_strings[0])
 
     def make_adas_line(self,adas_strings,rcsfs_map_to_nrcsfs):
-        '    1 4S2 4P4           (3)1( 2.0)               0.0000'
-        adas_format = '{:>5}{:<19}({:1}){:1}({:4.1f}){:>21.4f}'
+#        '    1 4S2 4P4           (3)1( 2.0)               0.0000'
+        adas_format = '{:>5}{:<19}({:1}){:1}({:4.1f})'#{:>21.4f}'
         current_csf_component_index = self.mixing_indices[0]
         current_nrcsf_index = int(rcsfs_map_to_nrcsfs[current_csf_component_index])
         #print(adas_strings)
@@ -99,10 +99,9 @@ class energy_eigenstate:
         self.adas_line = adas_format.format(
             self.level,
             as_string,
-            '1',
-            '1',
-            1.0,
-            en
+            self.multiplicity,
+            self.angular_momentum_orbital_int,
+            self.angular_momentum_float
         )
         
         #print(adas_strings[current_nrcsf_index])
@@ -127,14 +126,15 @@ class energy_eigenstate:
         self.terms_strings = terms_strings
         self.inner_terms_strings = inner_terms_strings
         self.angular_momentum = angular_momentum
-
+        
         if len(angular_momentum) > 2:
 
             if angular_momentum[-2] == "/":
                 self.angular_momentum_float = float(angular_momentum[0]) / float(angular_momentum[-1])
             else:
                 self.angular_momentum_float = float(angular_momentum)
-
+        else:
+            self.angular_momentum_float  = float(angular_momentum)
 
         self.parity = parity
         self.eigenenergy = eigenenergy
@@ -330,7 +330,6 @@ def create_csf_array_from_output(grasp_out_path):
         line = grasp_out.readline()
         x = line.find('!')
         if x != -1:
-            #print(line[0:x])
             line = line[0:x]
 
         split_string = line.split()
@@ -346,12 +345,6 @@ def create_csf_array_from_output(grasp_out_path):
 
         condensed = check_for_condensed_notation_in_row(occupation_string_array)
 
-        #print(occupation_string_array)
-
-        #removing comments:
-        #print(line)
-
-
         if condensed == False: 
             if length_string_array == 1: 
                 csf_array[:,jj] = int(occupation_string_array[0])
@@ -365,6 +358,7 @@ def create_csf_array_from_output(grasp_out_path):
     #print('found orbitals')
     #print(orb_labels)
     grasp_out.close()
+    print(num_nrcsf)
     return csf_array,orb_labels,num_nrcsf,num_orbitals,mode 
 
 
@@ -461,7 +455,7 @@ def find_core(csf_array_resorted_orbitals,sorted_orbs):
 
 def make_csf_strings(csf_array_resorted_orbitals,sorted_orbital_strings,num_csfs,core):
     #makes strings out of the input csfs.
-    
+    print(num_csfs)
     adas_strings = []
     
     csf_strings_in_components = []
@@ -1013,6 +1007,19 @@ def write_adasexjin(states,user_num_levels,charge,nelec):
     ip = np.loadtxt(TEXT_FILE)
     TEXT_FILE_terms = ROOT_DIR / 'ion_terms.dat'
     tt = np.loadtxt(TEXT_FILE_terms,dtype='>U2')
+    import os.path
+    check = os.path.isfile('shift')
+    
+    order = np.arange(0,user_num_levels,1)
+    
+    try:
+        shift = np.loadtxt('shift')
+        order = np.argsort(shift)
+        print('shifting')
+    except:
+        order = np.arange(0,user_num_levels,1)
+        
+        
     
     ion_stage_index = charge - nelec 
     atomic_number_index = charge - 1 
@@ -1029,7 +1036,9 @@ def write_adasexjin(states,user_num_levels,charge,nelec):
     
     
     for ii in range(0,user_num_levels):
-        state = states[ii]
+        state = states[order[ii]]
+        state.adas_line = state.adas_line + '{:>21.4f}'.format(shift[order[ii]] * RYDBERG_CM)
+        state.adas_line = state.adas_line.replace(state.adas_line[0:5],'{:5}'.format(ii+1))
         g.write(state.adas_line+'\n')
     
     

@@ -37,7 +37,7 @@ class eigenstate:
                     coefficient_string = '{:6.2f}'.format((100 * coefficient**2))+'%  '
                 else:
                     coefficient_string = '{:5.3f}'.format(coefficient)
-                
+                print(coefficient_string,csf_string)
                 string+= coefficient_string +  csf_string +' ' + jj_terms[ind[jj]]+ '  '
                 
         self.label_string = string.lower()

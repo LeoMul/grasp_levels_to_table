@@ -60,7 +60,12 @@ def main(
 
     if display_inner_terms:
         states = add_inner_occupation_strings_to_eigenclass(grasp_out_path,mode,states,display_inner_terms,csf_strings_prepared,map)
-
+    try:
+        e = np.loadtxt('shift')
+        states = add_shifted_energies_to_many_eigenstates(states,e)
+    except:
+        print('no shifts found')
+    
     output_table(states,user_num_levels,unit)
     
     adas = False 

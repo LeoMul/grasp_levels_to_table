@@ -66,7 +66,13 @@ def readConfigFile(path_to_config_dot_dat):
 
 
     #easiest way for me to do this:
-    das_file_numpy = np.loadtxt(path_to_config_dot_dat,skiprows=5,dtype=int)[:,0:-1]
+    das_file_numpy = np.loadtxt(path_to_config_dot_dat,skiprows=5,dtype=int)
+#h  handle a single cfg
+    shape = np.shape(das_file_numpy)
+    if len(shape)==1:
+        das_file_numpy = das_file_numpy.reshape(1,shape[0])
+    das_file_numpy = das_file_numpy[:,0:-1]
+
     #print(das_file_numpy)
     #temperory
     lambda_array = np.ones(num_orbs)
@@ -348,7 +354,7 @@ def read_oic_into_list_of_eigenstates(oic,csf_strings,num_levels,factor,unit,cor
     if len(x) == 1:
         skip *= 2
 
-    print('skip=',skip)
+    #print('skip=',skip)
     x = linecache.getline(oic, skip + 6).split()
     #print(x)
     #evil hack, idk why it works this way. 
@@ -385,6 +391,7 @@ def read_oic_into_list_of_eigenstates(oic,csf_strings,num_levels,factor,unit,cor
             j_string = str(j)
         
         lv = int(line[1])
+        tt = int(line[2])
         multiplicity = line[3]
         angular = line[4]
         cf_number = int(line[6]-1)
@@ -404,6 +411,7 @@ def read_oic_into_list_of_eigenstates(oic,csf_strings,num_levels,factor,unit,cor
             cf_number,
             csf_strings,
             lv,
+            tt,
             unit,
             factor,
             j_string
@@ -447,6 +455,7 @@ class energy_eigenstate_as_ic:
                  cf_number,
                  csf_strings,
                  lv_number,
+                 term_number,
                  unit,
                  factor,
                  j_string,
@@ -462,6 +471,7 @@ class energy_eigenstate_as_ic:
         self.cf_number          = cf_number
         self.level_index        = level_index
         self.lv_number = lv_number
+        self.term_number = term_number
         self.stat_weight = 2.0 * angular_momentum_j + 1.0
         self.j_string = j_string
         
@@ -695,7 +705,7 @@ def read_olg_for_groups():
         if len(line) > 3: 
             if line[-3] == 'LEVEL':
                 checker = False
-    print('jgroup data found at olg line',ii)
+    #print('jgroup data found at olg line',ii)
     
     done = False 
     
@@ -736,8 +746,8 @@ def read_olg_for_groups():
             done = True
     #print(groups[0][0,1])
     f.close()
-    print('total levels = ',num_levels)
-    print('jpi block sizes are',group_sizes)
+    #print('total levels = ',num_levels)
+    #print('jpi block sizes are',group_sizes)
     return groups,group_sizes
 
 
