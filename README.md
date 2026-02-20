@@ -1,6 +1,6 @@
 # grasp_levels_to_table
 usage: python3 (your path to)/grasp_ls_table.py 
-
+-a prints adasexj.in - will use shifts if 'shift' is present in the directory
 -f (your grasp.out, required - in at least output mode 1)
 
  -o (desired num orbitals in csfs, default 2, cannot print less than 2. not sure why yet) 
