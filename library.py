@@ -1014,22 +1014,36 @@ def write_adasexjin(states,user_num_levels,charge,nelec):
     
     try:
         shift = np.loadtxt('shift')
+        print('shifts - ',shift * RYDBERG_CM)
         order = np.argsort(shift)
+        user_num_levels = len(shift)
+
         print('shifting')
     except:
         order = np.arange(0,user_num_levels,1)
         
-        
+    #user_num_levels = max(user_num_levels,len(shift))
     
     ion_stage_index = charge - nelec 
     atomic_number_index = charge - 1 
     ion_pot = ip[ion_stage_index,atomic_number_index]
     ion_term = tt[ion_stage_index,atomic_number_index]
     g = open('adasexj.in.graspout','w')
-    g.write("&ADASEX NLEVS= {} NUMTMP=19 IRDTMP=1 ITCC=1 IBORN=-2 IRMPS=-1  IEL='{:2}' FIPOT={:11.1f} IONTRM='{:2}'/ \n".format(
+    g.write("&ADASEX NLEVS= {} NUMTMP=19 IRDTMP=1 ITCC=1 IBORN=-2 IRMPS=-1  IEL='{:2}' FIPOT={:11.1f} IONTRM='{:2} IONE=1'/ \n".format(
         user_num_levels,elements[charge-1],ion_pot,ion_term))
    
-    g.write("1.00+03 1.50+03 1.80+03 2.00+03 2.50+03 5.00+03 7.50+03 1.00+04 1.50+04 1.80+04 2.00+04 3.00+04 4.00+04 5.00+04 6.00+04 7.00+04 8.00+04 9.00+04 1.00+05 \n")
+   
+    tempString = ""
+    tempFormat = "{:8.2f}" 
+    
+    myTemps = 10 ** np.linspace(2,5,19)
+    for temp in myTemps:
+        tempString += tempFormat.format(temp)
+    tempString += '\n'
+    tempString = tempString.replace('E','')
+    
+        
+    g.write(tempString)
 
 
     
@@ -1037,8 +1051,14 @@ def write_adasexjin(states,user_num_levels,charge,nelec):
     
     for ii in range(0,user_num_levels):
         state = states[order[ii]]
+        #print(shift[order[ii]] * RYDBERG_CM)
         state.adas_line = state.adas_line + '{:>21.4f}'.format(shift[order[ii]] * RYDBERG_CM)
-        state.adas_line = state.adas_line.replace(state.adas_line[0:5],'{:5}'.format(ii+1))
+        stringChange = state.adas_line[0:5]
+        stringChange = stringChange.replace(stringChange,'{:5}'.format(ii+1))
+        #state.adas_line = state.adas_line.replace(state.adas_line[0:5],'{:5}'.format(ii+1))
+        stringList = list(state.adas_line)
+        stringList[0:5] = list(stringChange)[0:5]
+        state.adas_line = "".join(stringList)
         g.write(state.adas_line+'\n')
     
     
