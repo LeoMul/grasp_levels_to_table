@@ -1034,7 +1034,7 @@ def write_adasexjin(states,user_num_levels,charge,nelec):
    
    
     tempString = ""
-    tempFormat = "{:8.2e}" 
+    tempFormat = " {:8.2e}" 
     
     myTemps = 10 ** np.linspace(2,5,19)
     for temp in myTemps:
