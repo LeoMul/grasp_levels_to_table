@@ -1016,7 +1016,8 @@ def write_adasexjin(states,user_num_levels,charge,nelec):
         shift = np.loadtxt('shift')
         print('shifts - ',shift * RYDBERG_CM)
         order = np.argsort(shift)
-        user_num_levels = len(shift)
+        if user_num_levels != 0:
+            user_num_levels = len(shift)
 
         print('shifting')
     except:
