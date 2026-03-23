@@ -623,6 +623,7 @@ def find_relativistic_csfs(grasp_out_path,num_csf):
 def find_levels(grasp_out_path,inner,csf_strings_prepared,rcsfs_map_to_nrcsfs,adas_strings):
     graspout = open(grasp_out_path,'r')
     found = False
+    levels = []
     while found == False:
         lineunplit = graspout.readline()
         line = lineunplit.split()
@@ -666,7 +667,7 @@ def find_levels(grasp_out_path,inner,csf_strings_prepared,rcsfs_map_to_nrcsfs,ad
                     #print(current_length)
                     state = energy_eigenstate(level,term_strings,angularmomentum,parity,csf_index,mixing,eigenergy,csf_strings_prepared,rcsfs_map_to_nrcsfs,inner,adas_strings=adas_strings)
                     states.append(state)
-                
+                    levels.append(eigenergy)
                 in_a_state = True
 
                 #print(line)
@@ -696,7 +697,7 @@ def find_levels(grasp_out_path,inner,csf_strings_prepared,rcsfs_map_to_nrcsfs,ad
                               adas_strings=adas_strings)
     states.append(state)
 
-    return states,charge
+    return states,charge,levels
 
 
 def find_place_for_inner_term(csf_string):
@@ -959,10 +960,12 @@ def find_shifted_energies(grasp_out_path):
 def add_shifted_energies_to_many_eigenstates(eigenstates:list[energy_eigenstate],shifted_energies_ryd):
     counter = 0
     for state in eigenstates:
-            state.set_shifted_energy(shifted_energies_ryd[counter])
-            counter +=1 
             if counter > len(shifted_energies_ryd)-1:
-                break
+                state.set_shifted_energy(state.eigenenergy)
+            else:
+                state.set_shifted_energy(shifted_energies_ryd[counter])
+            counter +=1 
+
 
     return eigenstates
 
@@ -1000,7 +1003,7 @@ def print_out_a_values(total_data_class_array:list[transition]):
 
 
 
-def write_adasexjin(states,user_num_levels,charge,nelec):
+def write_adasexjin(states,user_num_levels,charge,nelec,levels):
     from pathlib import Path
     ROOT_DIR = Path(__file__).parent
     TEXT_FILE = ROOT_DIR / 'ion_energy.dat'
@@ -1010,18 +1013,30 @@ def write_adasexjin(states,user_num_levels,charge,nelec):
     import os.path
     check = os.path.isfile('shift')
     
-    order = np.arange(0,user_num_levels,1)
+    order = np.arange(0,len(levels),1)
+    
+    shift = levels.copy()
     
     try:
-        shift = np.loadtxt('shift')
-        print('shifts - ',shift * RYDBERG_CM)
-        order = np.argsort(shift)
-        if user_num_levels != 0:
+        shiftRead = np.loadtxt('shift')
+        print(shiftRead)
+        shift[0:len(shiftRead)] = shiftRead 
+        #print('shifts - ',shift * RYDBERG_CM)
+        if user_num_levels == 0:
             user_num_levels = len(shift)
 
         print('shifting')
     except:
-        order = np.arange(0,user_num_levels,1)
+        print('no shifts')
+    order = np.argsort(shift)
+
+    ff = open('ShiftingDebug.dat','w') 
+    
+    for ii in range(0,len(order)):
+        ff.write(f'Reordering level {ii+1:4} ---> {order[ii]+1:4} \n')
+    
+    ff.close()   
+        
         
     #user_num_levels = max(user_num_levels,len(shift))
     

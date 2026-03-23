@@ -56,23 +56,30 @@ def main(
     else:
         inner_terms = []
     #print(inner_terms)
-    states,charge = find_levels(grasp_out_path,inner_terms,csf_strings_prepared,map,adas_strings)
+    states,charge,levels = find_levels(grasp_out_path,inner_terms,csf_strings_prepared,map,adas_strings)
 
     if display_inner_terms:
         states = add_inner_occupation_strings_to_eigenclass(grasp_out_path,mode,states,display_inner_terms,csf_strings_prepared,map)
+        
+        
     try:
         e = np.loadtxt('shift')
-        states = add_shifted_energies_to_many_eigenstates(states,e)
+        print('shifts found')
     except:
+        e = levels
         print('no shifts found')
-    
+        
+    states = add_shifted_energies_to_many_eigenstates(states,e)
+
+
+    print(charge,nelec)
     output_table(states,user_num_levels,unit)
     
     adas = False 
     if (args.adas):
         adas = True
     if adas:
-        write_adasexjin(states,user_num_levels,charge,nelec)        
+        write_adasexjin(states,user_num_levels,charge,nelec,levels)        
     
     if args.ncorinc: 
         cut = float(args.ncorinc)
