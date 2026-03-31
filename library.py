@@ -1045,7 +1045,7 @@ def write_adasexjin(states,user_num_levels,charge,nelec,levels):
     ion_pot = ip[ion_stage_index,atomic_number_index]
     ion_term = tt[ion_stage_index,atomic_number_index]
     g = open('adasexj.in.graspout','w')
-    g.write("&ADASEX NLEVS= {} NUMTMP=19 IRDTMP=1 ITCC=1 IBORN=-2 IRMPS=-1  IEL='{:2}' FIPOT={:11.1f} IONTRM='{:2} IONE=1'/ \n".format(
+    g.write("&ADASEX NLEVS= {} NUMTMP=19 IRDTMP=1 ITCC=1 IBORN=-2 IRMPS=-1  IEL='{:2}' FIPOT={:11.1f} IONTRM='{:2}' IONE=1/ \n".format(
         user_num_levels,elements[charge-1],ion_pot,ion_term))
    
    
