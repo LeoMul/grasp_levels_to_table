@@ -6,7 +6,7 @@ RYDBERG_CM = 109737.316
 #preferred orbital order. you might need to change this for your preferred application.
 orbitals_order = ['1S', '2S', '2P', '3S', '3P', '3D', '4S', '4P', '4D', '5S', '5P','4F','5D', '6S', '6P', '7S', '5F', '6F', '6D', '7P', '8S','5G','6G','6H','8P','7D']
 
-orbital_angular_momentum_dictionary = np.array(['S','P','D','F','G','H','I'])
+orbital_angular_momentum_dictionary = np.array(['S','P','D','F','G','H','I','K','L','M','N','O'])
 
 
 
@@ -130,7 +130,15 @@ class energy_eigenstate:
         if len(angular_momentum) > 2:
 
             if angular_momentum[-2] == "/":
-                self.angular_momentum_float = float(angular_momentum[0]) / float(angular_momentum[-1])
+                print(angular_momentum, angular_momentum[0])
+                if len(angular_momentum) == 4:
+                    self.angular_momentum_float = float(angular_momentum[0:2]) / float(angular_momentum[-1])
+                elif len(angular_momentum)==3:
+                    self.angular_momentum_float = float(angular_momentum[0]) / float(angular_momentum[-1])
+                else:
+                    import sys
+                    print('lpm your code has failed yet again.') 
+                    sys.exit()
             else:
                 self.angular_momentum_float = float(angular_momentum)
         else:
@@ -1033,7 +1041,7 @@ def write_adasexjin(states,user_num_levels,charge,nelec,levels):
     ff = open('ShiftingDebug.dat','w') 
     
     for ii in range(0,len(order)):
-        ff.write(f'Reordering level {ii+1:4} ---> {order[ii]+1:4} \n')
+        ff.write(f'Reordering level {ii+1:4} <--- {order[ii]+1:4} \n')
     
     ff.close()   
         
@@ -1068,8 +1076,16 @@ def write_adasexjin(states,user_num_levels,charge,nelec,levels):
     for ii in range(0,user_num_levels):
         state = states[order[ii]]
         #print(shift[order[ii]] * RYDBERG_CM)
-        state.adas_line = state.adas_line + '{:>21.4f}'.format(shift[order[ii]] * RYDBERG_CM)
+        
+        
+        ee = shift[order[ii]] * RYDBERG_CM
+        if ii == 0:
+            ee = 0.0 #hack fix for unshifted ground. 
+            
+        state.adas_line = state.adas_line + '{:>21.4f}'.format(ee)
+
         stringChange = state.adas_line[0:5]
+        #print(state.adas_line)
         stringChange = stringChange.replace(stringChange,'{:5}'.format(ii+1))
         #state.adas_line = state.adas_line.replace(state.adas_line[0:5],'{:5}'.format(ii+1))
         stringList = list(state.adas_line)
