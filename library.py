@@ -417,7 +417,7 @@ def sort_orbitals(orb_labels,orbitals_order,csf_array):
     #this is a naive search but the number of orbitals should be small enough for it to not matter
 
     scores = []
-
+    big = 999
     for jj in range(0,len(orb_labels)):
         found = False 
         for ii in range(0,len(orbitals_order)):
@@ -427,7 +427,9 @@ def sort_orbitals(orb_labels,orbitals_order,csf_array):
                 scores.append(ii)
         if found == False:
             print('orbital not found',orb_labels[jj])
-            assert(1==0),'orbital not found, not implemented. stopping. add your orbital to the orbitals order global variable'
+            scores.append(big)
+            big+=1 
+            #assert(1==0),'orbital not found, not implemented. stopping. add your orbital to the orbitals order global variable'
         
     new_order = np.argsort(scores)
     csf_sorted_by_orbital = np.zeros_like(csf_array)
